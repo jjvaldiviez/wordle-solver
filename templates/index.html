@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Wordle Solver</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #121213;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 50px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(5, 60px);
+      grid-gap: 10px;
+      margin-bottom: 20px;
+    }
+    .cell {
+      width: 60px;
+      height: 60px;
+      border: 2px solid #3a3a3c;
+      font-size: 2em;
+      text-align: center;
+      line-height: 60px;
+      text-transform: uppercase;
+      background-color: #121213;
+      color: white;
+    }
+    .cell.correct {
+      background-color: #6aaa64;
+    }
+    .cell.present {
+      background-color: #c9b458;
+    }
+    .cell.absent {
+      background-color: #3a3a3c;
+    }
+    #message {
+      margin-top: 20px;
+      font-size: 1.2em;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Wordle Solver</h1>
+  <div class="grid" id="grid"></div>
+  <div id="message"></div>
+
+  <script>
+    const target = "CRISP"; // Change this to any 5-letter word
+    let currentGuess = "";
+    let row = 0;
+    let clicked = [0, 0, 0, 0, 0]
+
+    const grid = document.getElementById("grid");
+    const message = document.getElementById("message");
+
+    function createRow() {
+      for (let i = 0; i < 5; i++) {
+        const cell = document.createElement("div");
+        cell.classList.add("cell");
+        cell.classList.add("absent");
+        cell.setAttribute("id", `cell-${row}-${i}`);
+        cell.addEventListener("click", () => {
+          if (clicked[i] === 0) {
+            cell.classList.remove("absent");
+            cell.classList.add("present");
+            clicked[i] ++;
+          }else if (clicked[i] === 1){
+            cell.classList.remove("present");
+            cell.classList.add("correct");
+            clicked[i] ++;
+          }else {
+            cell.classList.remove("correct");
+            cell.classList.add("absent");
+            clicked[i] = 0;
+          }
+        })
+        grid.appendChild(cell);
+      }
+    }
+
+    createRow();
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Backspace" && currentGuess.length > 0) {
+        currentGuess = currentGuess.slice(0, -1);
+        updateGrid();
+      } else if (/^[a-zA-Z]$/.test(e.key) && currentGuess.length < 5) {
+        currentGuess += e.key.toUpperCase();
+        updateGrid();
+      } else if (e.key === "Enter" && currentGuess.length === 5) {
+        //checkGuess();
+        console.log("Enter clicked!")
+        getGuesses();
+      }
+    });
+
+    function updateGrid() {
+      for (let i = 0; i < 5; i++) {
+        const cell = document.getElementById(`cell-${row}-${i}`);
+        cell.textContent = currentGuess[i] || "";
+      }
+    }
+
+    function getColors(c){
+      let colors = [];
+      for(let i = 0; i < 5; i ++){
+        if(clicked[i] === c){
+          const cell = document.getElementById(`cell-${row}-${i}`)
+          colors.push(cell.textContent)
+        }else{
+          if(c !== 0) {
+            colors.push("_")
+          }
+        }
+      }
+      return colors
+    }
+
+    function getGuesses(){
+      console.log("Get Guesses")
+      let yellows = getColors(1);
+      let greens = getColors(2);
+      let grays = getColors(0);
+      console.log("yellows: ", yellows)
+      fetch('/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          yellows: yellows,
+          greens: greens,
+          grays: grays
+        })
+      }).then(response => response.json()).then(data => {
+        message.textContent = data.guesses;
+        console.log('Server response: ', data);
+      }).catch(error => {
+        console.error('Error: ', error);
+      })
+    }
+
+    function checkGuess() {
+      for (let i = 0; i < 5; i++) {
+        const cell = document.getElementById(`cell-${row}-${i}`);
+        const letter = currentGuess[i];
+        if (letter === target[i]) {
+          cell.classList.add("correct");
+        } else if (target.includes(letter)) {
+          cell.classList.add("present");
+        } else {
+          cell.classList.add("absent");
+        }
+      }
+
+      if (currentGuess === target) {
+        message.textContent = "🎉 You guessed it!";
+      } else {
+        row ++;
+        currentGuess = ""
+        createRow();
+        //message.textContent = "❌ Try again!";
+      }
+    }
+  </script>
+</body>
+</html>
