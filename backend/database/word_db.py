@@ -16,11 +16,12 @@ def convert_to_sql(grn, yel, gry):
     sql = f"SELECT * FROM words WHERE word LIKE '{green}'"
     n = len(grn)
     for i in range(n):
-        if grn[i] == '_':
-            if yel[i] != '_':
-                sql += f" AND SUBSTR(word, {i+1}, 1) != '{yel[i].lower()}'"
-        if yel[i] != '_':
-            sql += f" AND word LIKE '%{yel[i].lower()}%'"
+        if grn[i] == '_' and len(yel[i]) > 0:
+            for y in yel[i]:
+                sql += f" AND SUBSTR(word, {i + 1}, 1) != '{y.lower()}'"
+        if len(yel[i]) > 0:
+            for y in yel[i]:
+                sql += f" AND word LIKE '%{y.lower()}%'"
     for g in gry:
         sql += f" AND word NOT LIKE '%{g.lower()}%'"
     return sql
